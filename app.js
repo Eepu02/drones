@@ -103,29 +103,35 @@ const options = {
   },
 }
 
-const parser = new XMLParser();
-// const supabase = createClient('https://uokgtlwjygqqtnzfkjkt.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVva2d0bHdqeWdxcXRuemZramt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzMzNzU5ODksImV4cCI6MTk4ODk1MTk4OX0.MlF8bzo06y41zcTEkij7m4QDncUPBFF9Gb_4_-TJlm4', options)
-const supabase = createClient('https://rezyblgyhlamfrxqdrxo.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlenlibGd5aGxhbWZyeHFkcnhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzM3MTAyMzEsImV4cCI6MTk4OTI4NjIzMX0.VEtaoqrJounIMyhfhS4dUTXs-Y-N8wO7hCZS5s_mGuc')
-
-async function getData() {
-  const { data, error } = await supabase
-    .from('test')
-    .select('country')
-
-  console.log(data);
+const parserOptions = {
+  ignoreAttributes: false,
+  attributeNamePrefix: "attr_"
 }
-getData();
+
+const parser = new XMLParser(parserOptions);
+// const supabase = createClient('https://uokgtlwjygqqtnzfkjkt.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVva2d0bHdqeWdxcXRuemZramt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzMzNzU5ODksImV4cCI6MTk4ODk1MTk4OX0.MlF8bzo06y41zcTEkij7m4QDncUPBFF9Gb_4_-TJlm4', options)
+const supabase = createClient('https://rezyblgyhlamfrxqdrxo.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlenlibGd5aGxhbWZyeHFkcnhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzM3MTAyMzEsImV4cCI6MTk4OTI4NjIzMX0.VEtaoqrJounIMyhfhS4dUTXs-Y-N8wO7hCZS5s_mGuc', options)
+
+// async function getData() {
+//   const { data, error } = await supabase
+//     .from('test')
+//     .select('country')
+
+//   console.log(data);
+// }
+// getData();
 
 // supabase.from('test').select().then(res => {
 //   console.log(res);
 // });
-fetch('https://assignments.reaktor.com/birdnest/drones')
-    .then((response) => response.text())
-    .then((body) => {
-        const res = parser.parse(body);
-        json = res.report.capture.drone;
-        console.log(res.report.capture.drone);
-    });   
+
+// fetch('https://assignments.reaktor.com/birdnest/drones')
+//     .then((response) => response.text())
+//     .then((body) => {
+//         const res = parser.parse(body);
+//         json = res.report.capture.drone;
+//         console.log(res.report.capture.drone);
+//     });   
 // const res = parser.parse(data)
 // console.log(res.report.capture)
 // const response = await fetch('https://assignments.reaktor.com/birdnest/drones');
@@ -136,14 +142,15 @@ fetch('https://assignments.reaktor.com/birdnest/drones')
 async function getDrones() {
   const response = await fetch('https://assignments.reaktor.com/birdnest/drones');
   const body = await response.text();
-  return parser.parse(body.report);
+  return parser.parse(body).report;
 }
 
 // Must handle 404 error
 async function getPilotInfo(serialNumber) {
-  const url = 'https://assignments.reaktor.com/birdnest/pilots' + serialNumber;
+  const url = 'https://assignments.reaktor.com/birdnest/pilots/' + serialNumber;
   const response = await fetch(url);
-  return response;
+  const body = await response.text();
+  return JSON.parse(body);
 }
 
 // Holds the bird nest coordinates
@@ -157,47 +164,66 @@ const perimeterRadius = 100000;
 // Returns the drones distance to the bird nest. Uses the distance formula.
 // Altitude can be easily added for 3D-tracking.
 function distToBirdNest(x, y) {
-  return Math.sqrt((x - birdNest.x)^2 + (y - birdNest.y)^2);
+  // const xDiff = (x - birdNest.x) ** 2;
+  // const yDiff = (y - birdNest.y) ** 2;
+  // return Math.sqrt(xDiff + yDiff);
+  return Math.sqrt((x - birdNest.x) ** 2 + (y - birdNest.y) ** 2);
 }
 
-async function addViolation(serialNumber, dist, time) {
+function cleanViolations() {
+
+}
+
+async function addViolation(serialNumber, dist, timestamp) {
 
   // Fetch pilot info from the registry
-  const pilot = getPilotInfo(serialNumber);
+  const pilot = await getPilotInfo(serialNumber);
+  // console.log(pilot);
   
   const { error } = await supabase
     .from('violations')
     .insert({
-      'pilot_name': pilot.firstName + " " + pilot.lastName,
-      'pilot_email': pilot.email,
-      'pilot_phone_number': pilot.phoneNumber,
-      'pilot_id': pilot.pilotId,
-      'closest_distance': dist,
-      'time': time
-    })
-
-
+      first_name: pilot.firstName,
+      last_name: pilot.lastName,
+      email: pilot.email,
+      phone_number: pilot.phoneNumber,
+      pilot_id: pilot.pilotId,
+      closest_distance: dist,
+      time: timestamp,
+      serial_number: serialNumber
+    });
 }
 
 // Fetches drone data and checks it for violations
-function process() {
+async function process() {
   // Returns an array of the drones currently picked up by the sensor
-  const report = getDrones();
+  const report = await getDrones();
 
   // The timestamp will be the sensor time, as its the only confirmed
   // timestamp of the sighting
-  const time = report.capture.timeStamp;
+  // console.log(report);
+  const time = report.capture.attr_snapshotTimestamp;
 
   // const drones = report.capture.drone
   for (const drone of report.capture.drone) {
     const dist = distToBirdNest(drone.positionX, drone.positionY);
     if(dist > perimeterRadius) {
+      console.log("No violation, dist: " + dist);
       continue;
     }
     // NDZ violation
+    console.log("violation with dist: " + dist)
     addViolation(drone.serialNumber, dist, time);
   }
+
+  const { error } = await supabase
+    .from('violations')
+    .delete()
+    .lt('time', "now() - INTERVAL '10 MINUTE')");
 }
+
+process();
+// console.log(distToBirdNest(400811.45473757136, 209602.62374963035));
 
 http.createServer(function (req, res) {
     /*fs.readFile('main.html', function(err, data) {
