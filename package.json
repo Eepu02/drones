@@ -1,0 +1,26 @@
+{
+  "name": "drones",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Eepu02/drones.git"
+  },
+  "author": "Eepu02",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Eepu02/drones/issues"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "homepage": "https://github.com/Eepu02/drones#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.4.0",
+    "fast-xml-parser": "^4.0.13"
+  }
+}
