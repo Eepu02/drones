@@ -28,12 +28,12 @@ const parserOptions = {
 // App is a function handler that can be supplied to an HTTP server
 const app = express();
 const server = http.createServer(app);
-const port = process.env.PORT;
+const port = 3000;
 const io = new Server(server);
 const parser = new XMLParser(parserOptions);
 const supabase = createClient(
-  process.env.DB_URL,
-  process.env.DB_KEY,
+  "https://rezyblgyhlamfrxqdrxo.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlenlibGd5aGxhbWZyeHFkcnhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzM3MTAyMzEsImV4cCI6MTk4OTI4NjIzMX0.VEtaoqrJounIMyhfhS4dUTXs-Y-N8wO7hCZS5s_mGuc",
   options
 );
 
