@@ -55,6 +55,7 @@
                 var row = document.createElement('tr');
 
                 // Create a new td element for each attribute
+                // Currently relies on the correct order for the database query
                 for (const key in violation) {
                     var cell = document.createElement('td');
                     cell.textContent = violation[key];
