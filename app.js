@@ -43,11 +43,22 @@ app.set('view engine', 'ejs');
 // Set up static file serving (like .css files)
 app.use(express.static(__dirname + '/static'));
 
+// Holds the bird nest coordinates
+const birdNest = {
+  'x': 250000,
+  'y': 250000
+};
+
+// NDZ perimiter radius (in millimeters)
+const perimeterRadius = 100000;
+
+// Fetches and parses XML data from the monitoring equipment endpoint
 async function getDrones() {
   try {
     const response = await fetch('https://assignments.reaktor.com/birdnest/drones');
     const body = await response.text();
     return parser.parse(body).report;
+
   } catch(err) {
     console.log('Error fetching sensor data. Details: ' + err.message);
     return {};
@@ -61,20 +72,12 @@ async function getPilotInfo(serialNumber) {
     const response = await fetch(url);
     const body = await response.text();
     return JSON.parse(body);
+    
   } catch(err) {
     console.log('Error fetching pilot info. Details: ' + err);
     return {};
   }
 }
-
-// Holds the bird nest coordinates
-const birdNest = {
-  'x': 250000,
-  'y': 250000
-};
-
-// NDZ perimiter radius (in millimeters)
-const perimeterRadius = 100000;
 
 // Returns the drones distance to the bird nest. Uses the distance formula.
 // Altitude can be easily added for 3D-tracking.
@@ -184,6 +187,7 @@ async function process() {
 
 setInterval(process, 2 * 1000);
 
+// Handles the initial get request
 app.get('/', async (req, res) => {
   const data = await getViolations();
   res.render('pages/index', {
