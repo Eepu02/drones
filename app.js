@@ -3,6 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { XMLParser} = require("fast-xml-parser");
 const express = require('express');
 const { Server } = require("socket.io");
+require('dotenv').config();
 
 // Database options
 const options = {
@@ -28,7 +29,7 @@ const parserOptions = {
 // App is a function handler that can be supplied to an HTTP server
 const app = express();
 const server = http.createServer(app);
-const port = process.env.PORT || 3000;
+const port = 3000;
 const io = new Server(server);
 const parser = new XMLParser(parserOptions);
 const supabase = createClient(
