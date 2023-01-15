@@ -3,7 +3,6 @@ const { createClient } = require('@supabase/supabase-js');
 const { XMLParser} = require("fast-xml-parser");
 const express = require('express');
 const { Server } = require("socket.io");
-require('dotenv').config();
 
 // Database options
 const options = {
