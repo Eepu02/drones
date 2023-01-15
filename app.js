@@ -1,23 +1,10 @@
 const http = require('http');
-const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 const { XMLParser} = require("fast-xml-parser");
 const express = require('express');
-const path = require('path');
 const { Server } = require("socket.io");
 
-// App is a function handler that can be supplied to an HTTP server
-const app = express();
-const server = http.createServer(app);
-const port = 3000;
-const io = new Server(server);
-
-// set the view engine to ejs
-app.set('view engine', 'ejs');
-app.use(express.static(__dirname + '/static'));
-
-
-// Supabase options
+// Database options
 const options = {
   db: {
     schema: 'public',
@@ -28,31 +15,56 @@ const options = {
     detectSessionInUrl: true
   },
   global: {
-    headers: { 'x-my-custom-header': 'my-app-name' },
+    headers: {},
   },
-}
+};
 
 // XML parser options
 const parserOptions = {
   ignoreAttributes: false, // Attributes are needed for the sensor timestamp
   attributeNamePrefix: "attr_"
-}
+};
 
+// App is a function handler that can be supplied to an HTTP server
+const app = express();
+const server = http.createServer(app);
+const port = 3000;
+const io = new Server(server);
 const parser = new XMLParser(parserOptions);
-const supabase = createClient('https://rezyblgyhlamfrxqdrxo.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlenlibGd5aGxhbWZyeHFkcnhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzM3MTAyMzEsImV4cCI6MTk4OTI4NjIzMX0.VEtaoqrJounIMyhfhS4dUTXs-Y-N8wO7hCZS5s_mGuc', options)
+const supabase = createClient(
+  'https://rezyblgyhlamfrxqdrxo.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlenlibGd5aGxhbWZyeHFkcnhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzM3MTAyMzEsImV4cCI6MTk4OTI4NjIzMX0.VEtaoqrJounIMyhfhS4dUTXs-Y-N8wO7hCZS5s_mGuc',
+  options
+);
+
+// Set the view engine to ejs
+app.set('view engine', 'ejs');
+
+// Set up static file serving (like .css files)
+app.use(express.static(__dirname + '/static'));
 
 async function getDrones() {
-  const response = await fetch('https://assignments.reaktor.com/birdnest/drones');
-  const body = await response.text();
-  return parser.parse(body).report;
+  try {
+    const response = await fetch('https://assignments.reaktor.com/birdnest/drones');
+    const body = await response.text();
+    return parser.parse(body).report;
+  } catch(err) {
+    console.log('Error fetching sensor data. Details: ' + err.message);
+    return {};
+  }
 }
 
-// Must handle 404 error
+// Fetches a pilot's contact info given their drone's serial number
 async function getPilotInfo(serialNumber) {
   const url = 'https://assignments.reaktor.com/birdnest/pilots/' + serialNumber;
-  const response = await fetch(url);
-  const body = await response.text();
-  return JSON.parse(body);
+  try {
+    const response = await fetch(url);
+    const body = await response.text();
+    return JSON.parse(body);
+  } catch(err) {
+    console.log('Error fetching pilot info. Details: ' + err);
+    return {};
+  }
 }
 
 // Holds the bird nest coordinates
@@ -61,6 +73,7 @@ const birdNest = {
   'y': 250000
 };
 
+// NDZ perimiter radius (in millimeters)
 const perimeterRadius = 100000;
 
 // Returns the drones distance to the bird nest. Uses the distance formula.
@@ -69,8 +82,11 @@ function distToBirdNest(x, y) {
   return Math.sqrt((x - birdNest.x) ** 2 + (y - birdNest.y) ** 2);
 }
 
+// This function should delete records older than 10 minutes
+// However, there is a problem with using
+// detection_time < now() - INTERVAL '10 MINUTES'
+// For now, records are cleared manually.
 async function cleanViolations() {
-  // console.log("cleaning old violations!")
   const { error } = await supabase
     .from('violations')
     .delete()
@@ -80,10 +96,14 @@ async function cleanViolations() {
   // console.log(Date.now());
 }
 
+// Adds a violation to the database
 async function addViolation(serialNumber, dist, timestamp) {
 
   // Fetch pilot info from the registry
   // Pilot info will only be fetched for violators of the NDZ
+  //
+  // Pilot info may not always be available. In this case, the
+  // serial number of the drone will be saved. 
   const pilot = await getPilotInfo(serialNumber);
   
   // Add the record to the database
@@ -102,8 +122,10 @@ async function addViolation(serialNumber, dist, timestamp) {
 }
 
 // Fetches drone data and checks it for violations
+// Violations are added to the database
 async function checkViolations() {
 
+  let isViolated = false;
   const report = await getDrones();
 
   // The timestamp will be the sensor time, as its the only confirmed
@@ -111,17 +133,26 @@ async function checkViolations() {
   const time = report.capture.attr_snapshotTimestamp;
 
   for (const drone of report.capture.drone) {
+
     const dist = distToBirdNest(drone.positionX, drone.positionY);
-    if(dist > perimeterRadius) {
-      // console.log("No violation, dist: " + dist);
-      continue;
-    }
+    
+    if(dist > perimeterRadius) continue;
+    
     // NDZ violation
-    // console.log("violation with dist: " + dist)
     addViolation(drone.serialNumber, dist, time);
+    isViolated = true;
   }
+  return isViolated
 }
 
+// Returns all violations within the last 10 minutes
+// Returned attributes are (in this order):
+// - detection_time
+// - closest_distance
+// - first_name
+// - last_name
+// - email
+// - phone_number
 async function getViolations() {
   // const { data, error } = await supabase
   //   .from('violations')
@@ -134,24 +165,27 @@ async function getViolations() {
   return data;
 }
 
+// This function is called on an interval and will check the perimeter
+// for violations, fetch
 async function process() {
-  await checkViolations();
 
-  // Returns all violations within the last 10 minutes
-  const data = await getViolations();
+  // Only if new violations are detected we'll push
+  // new data to the client
+  if(await checkViolations()) {
 
-  // Send the updated violations to the page
-  io.emit('refresh', data);
+    // Returns all violations within the last 10 minutes
+    const data = await getViolations();
+
+    // Send the updated violations to the page
+    io.emit('refresh', data);
+  }
 }
 
-// console.log("starting!");
+
 setInterval(process, 2 * 1000);
-// let data = getViolations();
 
 app.get('/', async (req, res) => {
   const data = await getViolations();
-  process();
-  // console.log(data);
   res.render('pages/index', {
     violations: data
   });

@@ -10,12 +10,12 @@
 <body>
     <h1>NDZ violations</h1>
     <p>This page shows the pilot contact info for pilots who violated the No Drone Zone (NDZ) within the last 10 minutes.</p>
-    <p>A drone is considered to be in violation of the NDZ if it is within 250 meters of the nest.</p>
+    <p>A drone is considered to be in violation of the NDZ if it is within 100 meters of the Monadikuikka nest.</p>
     <div class="table-wrapper">
         <table id="table">
             <tr>
-                <th>Time</th>
-                <th>Closest confirmed distance</th>
+                <th>Time (UTC)</th>
+                <th>Distance (m)</th>
                 <th>First name</th>
                 <th>Last name</th>
                 <th>Email</th>
@@ -28,8 +28,8 @@
                     <td><%= violation.closest_distance %></td>
                     <td><%= violation.first_name %></td>
                     <td><%= violation.last_name %></td>
-                    <td><%= violation.email %></td>
-                    <td><%= violation.phone_number %></td>
+                    <td><a href="mailto:<%= violation.email %>"><%= violation.email %></a></td>
+                    <td><a href="tel:<%= violation.phone_number %>"><%= violation.phone_number %></a></td>
                 </tr>
             <% }); %>
             </tbody>
@@ -40,13 +40,21 @@
         // Handles updates to the data
         var socket = io();
         const table = document.getElementById('table');
+
         socket.on('refresh', function(violations) {
+
+            // Remove previous rows
             var tableBody = document.getElementById('tbody');
             tableBody.remove();
             tableBody = document.createElement('tbody');
             tableBody.setAttribute('id', 'tbody');
+
+            // Populate table body with records
+            // Not the best solution, as the data must be in the correct order
             for (const violation of violations) {
                 var row = document.createElement('tr');
+
+                // Create a new td element for each attribute
                 for (const key in violation) {
                     var cell = document.createElement('td');
                     cell.textContent = violation[key];
