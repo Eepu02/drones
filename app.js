@@ -2,6 +2,20 @@ const http = require('http');
 const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 const { XMLParser} = require("fast-xml-parser");
+const express = require('express');
+const path = require('path');
+const { Server } = require("socket.io");
+
+// App is a function handler that can be supplied to an HTTP server
+const app = express();
+const server = http.createServer(app);
+const port = 3000;
+const io = new Server(server);
+
+// set the view engine to ejs
+app.set('view engine', 'ejs');
+app.use(express.static(__dirname + '/static'));
+
 
 // Supabase options
 const options = {
@@ -56,14 +70,14 @@ function distToBirdNest(x, y) {
 }
 
 async function cleanViolations() {
-  console.log("cleaning old violations!")
+  // console.log("cleaning old violations!")
   const { error } = await supabase
     .from('violations')
     .delete()
     // .lt('detection_time', "2023-01-15 00:35:00+02"); //works
     // .lt('detection_time', "CURRENT_TIMESTAMP - INTERVAL 10 MINUTE");
     .lt('detection_time', Date.now() - 10 * 60000);
-  console.log(Date.now());
+  // console.log(Date.now());
 }
 
 async function addViolation(serialNumber, dist, timestamp) {
@@ -88,7 +102,7 @@ async function addViolation(serialNumber, dist, timestamp) {
 }
 
 // Fetches drone data and checks it for violations
-async function process() {
+async function checkViolations() {
 
   const report = await getDrones();
 
@@ -99,27 +113,55 @@ async function process() {
   for (const drone of report.capture.drone) {
     const dist = distToBirdNest(drone.positionX, drone.positionY);
     if(dist > perimeterRadius) {
-      console.log("No violation, dist: " + dist);
+      // console.log("No violation, dist: " + dist);
       continue;
     }
     // NDZ violation
-    console.log("violation with dist: " + dist)
+    // console.log("violation with dist: " + dist)
     addViolation(drone.serialNumber, dist, time);
   }
+}
 
-  // Delete violations that are older than 10 minutes
-  await cleanViolations();
+async function getViolations() {
+  // const { data, error } = await supabase
+  //   .from('violations')
+  //   .select('detection_time, closest_distance, first_name, last_name, email, phone_number')
+  //   .gt('detection_time', "now() - INTERVAL '10 minute'") //this doesn't work for some reason
+  //   .order('detection_time', { ascending: false });
+  const { data, error } = await supabase
+    .from('recent_violations') // This is a view defined in the database.
+    .select();
+  return data;
+}
+
+async function process() {
+  await checkViolations();
+
+  // Returns all violations within the last 10 minutes
+  const data = await getViolations();
+
+  // Send the updated violations to the page
+  io.emit('refresh', data);
 }
 
 // console.log("starting!");
-process();
+setInterval(process, 2 * 1000);
+// let data = getViolations();
 
-http.createServer(function (req, res) {
-    /*fs.readFile('main.html', function(err, data) {
-      res.writeHead(200, {'Content-Type': 'text/html'});
-      res.write(data);
-      return res.end();
-    });*/
-    res.writeHead(200, {'Content-Type:': 'text/html'});
-    res.end("Hello world!")
-  }).listen(8080); 
+app.get('/', async (req, res) => {
+  const data = await getViolations();
+  process();
+  // console.log(data);
+  res.render('pages/index', {
+    violations: data
+  });
+});
+
+// io.on('connection', (socket) => {
+//   console.log('a user connected');
+//   // socket.broadcast.emit('refresh');
+// });
+
+server.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+})

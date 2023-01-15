@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <h1>NDZ violations</h1>
+    <p>This page shows the pilot contact info for pilots who violated the No Drone Zone (NDZ) within the last 10 minutes.</p>
+    <p>A drone is considered to be in violation of the NDZ if it is within 250 meters of the nest.</p>
+    <div class="table-wrapper">
+        <table id="table">
+            <tr>
+                <th>Time</th>
+                <th>Closest confirmed distance</th>
+                <th>First name</th>
+                <th>Last name</th>
+                <th>Email</th>
+                <th>Phone</th>
+            </tr>
+            <tbody id="tbody">
+            <% violations.forEach(function(violation) { %>
+                <tr>
+                    <td><%= violation.detection_time %></td>
+                    <td><%= violation.closest_distance %></td>
+                    <td><%= violation.first_name %></td>
+                    <td><%= violation.last_name %></td>
+                    <td><%= violation.email %></td>
+                    <td><%= violation.phone_number %></td>
+                </tr>
+            <% }); %>
+            </tbody>
+        </table>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Handles updates to the data
+        var socket = io();
+        const table = document.getElementById('table');
+        socket.on('refresh', function(violations) {
+            var tableBody = document.getElementById('tbody');
+            tableBody.remove();
+            tableBody = document.createElement('tbody');
+            tableBody.setAttribute('id', 'tbody');
+            for (const violation of violations) {
+                var row = document.createElement('tr');
+                for (const key in violation) {
+                    var cell = document.createElement('td');
+                    cell.textContent = violation[key];
+                    row.appendChild(cell);
+                }
+                tableBody.appendChild(row);
+            }
+            table.appendChild(tableBody);
+            //window.scrollTo(0, document.body.scrollHeight);
+        });
+    </script>
+</body>
+</html>
