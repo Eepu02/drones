@@ -28,7 +28,7 @@ const parserOptions = {
 // App is a function handler that can be supplied to an HTTP server
 const app = express();
 const server = http.createServer(app);
-const port = 3000;
+const port = process.env.PORT || 3000;
 const io = new Server(server);
 const parser = new XMLParser(parserOptions);
 const supabase = createClient(
@@ -72,7 +72,7 @@ async function getPilotInfo(serialNumber) {
     const response = await fetch(url);
     const body = await response.text();
     return JSON.parse(body);
-    
+
   } catch(err) {
     console.log('Error fetching pilot info. Details: ' + err);
     return {};
@@ -124,12 +124,11 @@ async function addViolation(serialNumber, dist, timestamp) {
     });
 }
 
-// Fetches drone data and checks it for violations
+// Checks the report for violations
 // Violations are added to the database
-async function checkViolations() {
+function checkViolations(report) {
 
   let isViolated = false;
-  const report = await getDrones();
 
   // The timestamp will be the sensor time, as its the only confirmed
   // timestamp of the sighting
@@ -169,12 +168,14 @@ async function getViolations() {
 }
 
 // This function is called on an interval and will check the perimeter
-// for violations, fetch
+// for violations, fetch violations from the database and signal the
+// client to update the table
 async function process() {
 
-  // Only if new violations are detected we'll push
-  // new data to the client
-  if(await checkViolations()) {
+  const report = await getDrones();
+
+  // Push new data to the client only if new violations are detected
+  if(checkViolations(report)) {
 
     // Returns all violations within the last 10 minutes
     const data = await getViolations();
@@ -184,7 +185,8 @@ async function process() {
   }
 }
 
-
+// Function process will be called every 2 seconds
+// (roughly matches with the endpoint update interval)
 setInterval(process, 2 * 1000);
 
 // Handles the initial get request
@@ -195,11 +197,6 @@ app.get('/', async (req, res) => {
   });
 });
 
-// io.on('connection', (socket) => {
-//   console.log('a user connected');
-//   // socket.broadcast.emit('refresh');
-// });
-
 server.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
+  console.log(`Server started on port ${port}`)
 })
