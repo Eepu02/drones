@@ -14,7 +14,7 @@
     <div class="table-wrapper">
         <table id="table">
             <tr>
-                <th>Time (UTC)</th>
+                <th>Time (Local)</th>
                 <th>Distance (m)</th>
                 <th>First name</th>
                 <th>Last name</th>
@@ -24,7 +24,7 @@
             <tbody id="tbody">
             <% violations.forEach(function(violation) { %>
                 <tr>
-                    <td><%= violation.detection_time %></td>
+                    <td><time><%= violation.detection_time %>></time></td>
                     <td><%= violation.closest_distance %></td>
                     <td><%= violation.first_name %></td>
                     <td><%= violation.last_name %></td>

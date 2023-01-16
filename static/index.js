@@ -21,7 +21,8 @@ socket.on('refresh', function(violations) {
         let cells = Array(6).fill().map(x => document.createElement('td'));
 
         // Add values (and links were appropriate)
-        cells[0].textContent = violation.detection_time;
+        let d = new Date(Date.parse(violation.detection_time));
+        cells[0].innerHTML = `<time>${d.toLocaleString()}</time>`;
         cells[1].textContent = violation.closest_distance;
         cells[2].textContent = violation.first_name;
         cells[3].textContent = violation.last_name;
