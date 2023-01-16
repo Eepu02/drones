@@ -50,29 +50,22 @@
             tableBody.setAttribute('id', 'tbody');
 
             // Populate table body with records
-            // Not the best solution, as the data must be in the correct order
             for (const violation of violations) {
-                var row = document.createElement('tr');
-                var cell = document.createElement('td')
-                var cells = Array(6).fill().map(u => cell);
 
+                // Create a new row for each violation
+                var row = document.createElement('tr');
+
+                // Populate the row with cells ('td' tags)
+                var cells = Array(6).fill().map(x => document.createElement('td'));
                 cells[0].textContent = violation.detection_time;
                 cells[1].textContent = violation.closest_distance;
+                //console.log(violation.closest_distance);
                 cells[2].textContent = violation.first_name;
                 cells[3].textContent = violation.last_name;
-                cells[4].textContent = violation.email;
-                cells[5].textContent = violation.phone_number;
+                cells[4].innerHTML = `<a href="mailto:${violation.email}">${violation.email}</a>`;
+                cells[5].innerHTML = `<a href="tel:${violation.phone_number}">${violation.phone_number}</a>`;
 
-                for (const cell of cells) {
-                    row.appendChild(cell);
-                }
-                // Create a new td element for each attribute
-                // Currently relies on the correct order for the database query
-                <!-- for (const key in violation) {
-                    var cell = document.createElement('td');
-                    cell.textContent = violation[key];
-                    row.appendChild(cell);
-                } -->
+                for (const cell of cells) row.appendChild(cell);
                 tableBody.appendChild(row);
             }
             table.appendChild(tableBody);
