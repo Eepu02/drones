@@ -164,7 +164,6 @@ async function getViolations() {
   const { data, error } = await supabase
     .from('recent_violations') // This is a view defined in the database.
     .select();
-  // console.log(data[0]);
   return data;
 }
 
