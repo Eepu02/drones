@@ -195,6 +195,7 @@ app.get('/', async (req, res) => {
   res.render('pages/index', {
     violations: data
   });
+  io.emit("refresh", data);
 });
 
 server.listen(port, () => {

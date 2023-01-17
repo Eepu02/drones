@@ -14,7 +14,7 @@
     <div class="table-wrapper">
         <table id="table">
             <tr>
-                <th>Time (UTC)</th>
+                <th>Time (Local)</th>
                 <th>Distance (m)</th>
                 <th>First name</th>
                 <th>Last name</th>
@@ -24,7 +24,7 @@
             <tbody id="tbody">
             <% violations.forEach(function(violation) { %>
                 <tr>
-                    <td><%= violation.detection_time %></td>
+                    <td><time><%= violation.detection_time %>></time></td>
                     <td><%= violation.closest_distance %></td>
                     <td><%= violation.first_name %></td>
                     <td><%= violation.last_name %></td>
@@ -35,37 +35,8 @@
             </tbody>
         </table>
     </div>
+    <!-- These scripts are responsible for dynamically loading new violations -->
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        // Handles updates to the data
-        var socket = io();
-        const table = document.getElementById('table');
-
-        socket.on('refresh', function(violations) {
-
-            // Remove previous rows
-            var tableBody = document.getElementById('tbody');
-            tableBody.remove();
-            tableBody = document.createElement('tbody');
-            tableBody.setAttribute('id', 'tbody');
-
-            // Populate table body with records
-            // Not the best solution, as the data must be in the correct order
-            for (const violation of violations) {
-                var row = document.createElement('tr');
-
-                // Create a new td element for each attribute
-                // Currently relies on the correct order for the database query
-                for (const key in violation) {
-                    var cell = document.createElement('td');
-                    cell.textContent = violation[key];
-                    row.appendChild(cell);
-                }
-                tableBody.appendChild(row);
-            }
-            table.appendChild(tableBody);
-            //window.scrollTo(0, document.body.scrollHeight);
-        });
-    </script>
+    <script src="index.js"></script>
 </body>
 </html>
