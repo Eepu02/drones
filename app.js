@@ -85,18 +85,17 @@ function distToBirdNest(x, y) {
   return Math.sqrt((x - birdNest.x) ** 2 + (y - birdNest.y) ** 2);
 }
 
-// This function should delete records older than 10 minutes
-// However, there is a problem with using
+// This function deletes records older than treshold (minutes)
+// There is a problem with using
 // detection_time < now() - INTERVAL '10 MINUTES'
-// For now, records are cleared manually.
-async function cleanViolations() {
+// (supabse throws an error)
+async function cleanViolations(tresholdMinutes) {
+  let d = new Date(Date.now() - tresholdMinutes * 60000);
   const { error } = await supabase
     .from('violations')
     .delete()
-    // .lt('detection_time', "2023-01-15 00:35:00+02"); //works
     // .lt('detection_time', "CURRENT_TIMESTAMP - INTERVAL 10 MINUTE");
-    .lt('detection_time', Date.now() - 10 * 60000);
-  // console.log(Date.now());
+    .lt('detection_time', d.toISOString());
 }
 
 // Adds a violation to the database
@@ -130,6 +129,12 @@ function checkViolations(report) {
 
   let isViolated = false;
 
+  // If the fetch returns an empty response, do not try to check the drones
+  if (!(Object.hasOwn(report, 'capture'))) {
+    console.log('No key "capture" in fetched report! Report: ' + report);
+    return isViolated;
+  }
+
   // The timestamp will be the sensor time, as its the only confirmed
   // timestamp of the sighting
   const time = report.capture.attr_snapshotTimestamp;
@@ -162,8 +167,8 @@ async function getViolations() {
   //   .gt('detection_time', "now() - INTERVAL '10 minute'") //this doesn't work for some reason
   //   .order('detection_time', { ascending: false });
   const { data, error } = await supabase
-    .from('recent_violations') // This is a view defined in the database.
-    .select();
+    .from('recent_violations') // This is a view defined in the database. Functions the same as
+    .select();                 // intended above.
   return data;
 }
 
@@ -188,6 +193,12 @@ async function process() {
 // Function process will be called every 2 seconds
 // (roughly matches with the endpoint update interval)
 setInterval(process, 2 * 1000);
+
+// Delete records older than 10 minutes every 10 minutes
+setInterval(function() {
+    cleanViolations(10)
+  },
+  10 * 60000);
 
 // Handles the initial get request
 app.get('/', async (req, res) => {
