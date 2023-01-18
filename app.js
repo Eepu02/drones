@@ -57,7 +57,7 @@ async function getDrones() {
   try {
     const response = await fetch('https://assignments.reaktor.com/birdnest/drones');
     const body = await response.text();
-    // console.log(parser.parse(body).report);
+    console.log(parser.parse(body).report);
     return parser.parse(body).report;
 
   } catch(err) {
