@@ -57,6 +57,7 @@ async function getDrones() {
   try {
     const response = await fetch('https://assignments.reaktor.com/birdnest/drones');
     const body = await response.text();
+    // console.log(parser.parse(body).report);
     return parser.parse(body).report;
 
   } catch(err) {
@@ -130,9 +131,14 @@ function checkViolations(report) {
   let isViolated = false;
 
   // If the fetch returns an empty response, do not try to check the drones
-  if (!(Object.hasOwn(report, 'capture'))) {
-    console.log('No key "capture" in fetched report! Report: ' + report);
-    return isViolated;
+  try {
+    if (!(Object.hasOwn(report, 'capture'))) {
+      console.log('No key "capture" in fetched report! Report: ' + report);
+      return isViolated;
+    }
+  } catch(err) {
+    console.log("Error reading report. Details: " + err);
+    return false;
   }
 
   // The timestamp will be the sensor time, as its the only confirmed
